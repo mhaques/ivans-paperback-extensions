@@ -17866,32 +17866,12 @@ var _Sources = (() => {
     async getChapterDetails(mangaId, chapterId) {
       await this.refreshBuildId();
 
-      // First get the chapter info from the series endpoint
-      const mangaDetailsPageProps = JSON.parse(
-        (
-          await this.scheduleRequest(
-            App.createRequest({
-              url: `${FLAMECOMICS_DOMAIN}/_next/data/${this.buildId}/series/${mangaId}.json?id=${mangaId}`,
-              method: "GET",
-            }),
-            0
-          )
-        ).data
-      ).pageProps;
-
-      const chapter = mangaDetailsPageProps.chapters.find(
-        (chapter2) => chapter2.chapter_id.toString() === chapterId
-      );
-      if (!chapter) {
-        throw new Error("Chapter not found");
-      }
-
-      // Now get the actual chapter page data which should contain images
+      // Directly get the chapter page data using the token (chapterId is already the token)
       let chapterPageResponse;
       try {
         chapterPageResponse = await this.scheduleRequest(
           App.createRequest({
-            url: `${FLAMECOMICS_DOMAIN}/_next/data/${this.buildId}/series/${mangaId}/${chapter.token}.json?id=${mangaId}&token=${chapter.token}`,
+            url: `${FLAMECOMICS_DOMAIN}/_next/data/${this.buildId}/series/${mangaId}/${chapterId}.json?id=${mangaId}&token=${chapterId}`,
             method: "GET",
           }),
           0
@@ -17945,7 +17925,7 @@ var _Sources = (() => {
         // Handle different possible image formats
         const imageName =
           imageData.name || imageData.filename || imageData || `${index}.jpg`;
-        let imageUrl = `${FLAMECOMICS_CDN_DOMAIN}/${IMAGE_CDN_SLUG}/${mangaId}/${chapter.token}/${imageName}`;
+        let imageUrl = `${FLAMECOMICS_CDN_DOMAIN}/${IMAGE_CDN_SLUG}/${mangaId}/${chapterId}/${imageName}`;
 
         // Add cache-busting timestamp if available
         if (imageData.modified) {
@@ -17959,7 +17939,7 @@ var _Sources = (() => {
       });
 
       return App.createChapterDetails({
-        id: chapter.chapter_id.toString(),
+        id: chapterPageProps.chapter.chapter_id.toString(),
         mangaId,
         pages: images,
       });
