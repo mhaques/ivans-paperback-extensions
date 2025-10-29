@@ -14841,6 +14841,8 @@ var _Sources = (() => {
     }
     async getChapterDetails(mangaId, chapterId) {
       await this.refreshBuildId();
+      
+      // First get the chapter info from the series endpoint
       const mangaDetailsPageProps = JSON.parse(
         (await this.scheduleRequest(
           App.createRequest({
@@ -14850,15 +14852,75 @@ var _Sources = (() => {
           0
         )).data
       ).pageProps;
+      
       const chapter = mangaDetailsPageProps.chapters.find(
         (chapter2) => chapter2.chapter_id.toString() === chapterId
       );
       if (!chapter) {
         throw new Error("Chapter not found");
       }
-      const images = Object.entries(chapter.images).map(([index2, image]) => {
-        return `${FLAMECOMICS_CDN_DOMAIN}/${IMAGE_CDN_SLUG}/${mangaId}/${chapter.token}/${image.name}`;
+
+      // Now get the actual chapter page data which should contain images
+      let chapterPageResponse;
+      try {
+        chapterPageResponse = await this.scheduleRequest(
+          App.createRequest({
+            url: `${FLAMECOMICS_DOMAIN}/_next/data/${this.buildId}/series/${mangaId}/${chapter.token}.json?id=${mangaId}&token=${chapter.token}`,
+            method: "GET"
+          }),
+          0
+        );
+      } catch (error) {
+        throw new Error(`Failed to fetch chapter data: ${error.message}`);
+      }
+
+      let chapterPageProps;
+      try {
+        const parsedData = JSON.parse(chapterPageResponse.data);
+        chapterPageProps = parsedData.pageProps;
+      } catch (error) {
+        throw new Error(`Failed to parse chapter data JSON: ${error.message}`);
+      }
+
+      // Debug: Log the structure we received
+      console.log("=== FLAMECOMICS DEBUG VERSION 2.0 ===");
+      console.log("Chapter page props structure:", JSON.stringify(chapterPageProps, null, 2));
+      
+      // Check if the expected structure exists
+      if (!chapterPageProps) {
+        throw new Error("No pageProps found in chapter response");
+      }
+      
+      if (!chapterPageProps.chapter) {
+        throw new Error(`No chapter found in pageProps. Available keys: ${Object.keys(chapterPageProps)}`);
+      }
+      
+      if (!chapterPageProps.chapter.images) {
+        throw new Error(`No images found in chapter. Available chapter keys: ${Object.keys(chapterPageProps.chapter)}`);
+      }
+
+      // Convert images object to URLs
+      const imagesObject = chapterPageProps.chapter.images;
+      
+      // Additional safety check before Object.entries
+      if (!imagesObject || typeof imagesObject !== 'object') {
+        throw new Error(`Images object is invalid: ${typeof imagesObject}, value: ${JSON.stringify(imagesObject)}`);
+      }
+      
+      const images = Object.entries(imagesObject).map(([index, imageData]) => {
+        // Handle different possible image formats
+        const imageName = imageData.name || imageData.filename || imageData || `${index}.jpg`;
+        let imageUrl = `${FLAMECOMICS_CDN_DOMAIN}/${IMAGE_CDN_SLUG}/${mangaId}/${chapter.token}/${imageName}`;
+        
+        // Add cache-busting timestamp if available
+        if (imageData.modified) {
+          const timestamp = Math.floor(new Date(imageData.modified).getTime() / 1000);
+          imageUrl += `?${timestamp}`;
+        }
+        
+        return imageUrl;
       });
+
       return App.createChapterDetails({
         id: chapter.chapter_id.toString(),
         mangaId,
