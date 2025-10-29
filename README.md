@@ -8,4 +8,4 @@ For support, you can join [Netsky's](https://github.com/TheNetsky) [discord serv
 
 | For Paperback Version | Link |
 | --- | --- |
-| 0.8.x < 0.9 | [/paperback-0.8](https://ivanmatthew.github.io/ivans-paperback-extensions/paperback-0.8) |
+| 0.8.x < 0.9 | [/paperback-0.8](https://mhaques.github.io/ivans-paperback-extensions/paperback-0.8) |
