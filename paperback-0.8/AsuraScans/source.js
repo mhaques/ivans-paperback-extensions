@@ -17314,8 +17314,8 @@ var _Sources = (() => {
     constructor() {
       // ----REQUEST MANAGER----
       this.requestManager = App.createRequestManager({
-        requestsPerSecond: 4,
-        requestTimeout: 15e3,
+        requestsPerSecond: 2,
+        requestTimeout: 30e3,
         interceptor: {
           interceptRequest: async (request) => {
             request.headers = {
